@@ -5,6 +5,7 @@ import Carbon
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var overlayWindow: OverlayWindow?
+    var sniperWindow: SniperWindow? // Keep strong reference
     var statusItem: NSStatusItem!
     let apiClient: APIClient
     
@@ -42,6 +43,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    // ... hotkeys ...
     func setupGlobalHotkey() {
         // Register Capture Hotkey (Cmd+Option+S)
         // cmdKey = 256, optionKey = 2048
@@ -98,7 +100,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func captureAndAnalyze() {
-        print("Capturing screen...")
+        print("Stealth Capture Initiated...")
         
         // Check permissions first
         if !ScreenCapture.checkPermissions() {
@@ -110,7 +112,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Hide existing overlay to allow clean capture
         overlayWindow?.orderOut(nil)
         
-        guard let screenImage = ScreenCapture.captureScreen() else {
+        // Stealth Mode: Capture immediately without activating the app
+        // We do NOT activate the app, so focus remains on the browser/exam.
+        
+        // Slight delay to allow overlay to hide (if it was visible)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self else { return }
+            self.processCapture(rect: .zero) // .zero or nil implies full screen in our updated logic? 
+            // Wait, ScreenCapture.captureScreen(rect: nil) defaults to full screen.
+            // Let's check processCapture signature. It takes NSRect.
+            // I need to update processCapture to handle 'nil' or make ScreenCapture handle it.
+            // Actually, currently processCapture takes (rect: NSRect).
+            // Let's adjust processCapture to take optional rect or handle .zero as full screen.
+        }
+    }
+    
+    func processCapture(rect: NSRect) {
+        // If rect is .zero, ScreenCapture.captureScreen uses full screen
+        // We should explicitly pass nil if we want full screen, OR update ScreenCapture to treat .zero as full screen?
+        // ScreenCapture.captureScreen takes CGRect? = nil. 
+        // rect passed here is NSRect. If it's .zero, we probably mean full screen in this context.
+        
+        let captureRect: CGRect? = (rect == .zero) ? nil : rect
+        
+        guard let screenImage = ScreenCapture.captureScreen(rect: captureRect) else {
             print("Failed to capture screen")
             return
         }
@@ -143,7 +168,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
              let frame = NSRect(x: screenRect.maxX - width - 20, y: screenRect.maxY - height - 40, width: width, height: height)
              
             let window = OverlayWindow(contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
-            window.level = .floating
+            window.level = .screenSaver
             window.backgroundColor = .clear
             window.isOpaque = false
             window.hasShadow = false

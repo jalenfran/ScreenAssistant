@@ -9,7 +9,7 @@ struct APIClient {
     
     func analyzeImage(base64Image: String, completion: @escaping (String?) -> Void) {
         // Gemini 2.5 Flash endpoint (Current stable as of 2026)
-        let urlString = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=\(apiKey)"
+        let urlString = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=\(apiKey)"
         guard let url = URL(string: urlString) else {
             print("Invalid URL")
             completion(nil)

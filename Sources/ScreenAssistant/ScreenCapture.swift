@@ -2,30 +2,21 @@ import Cocoa
 import CoreGraphics
 
 struct ScreenCapture {
-    static func captureScreen() -> NSImage? {
-        let tempPath = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("screen_assistant_capture.png")
+    static func captureScreen(rect: CGRect? = nil) -> NSImage? {
+        // If rect is provided, use it. Otherwise, capture main screen.
+        let captureRect = rect ?? CGRect.infinite
         
-        // Remove existing file if any
-        try? FileManager.default.removeItem(at: tempPath)
-        
-        // Interactve capture (crosshair selection)
-        let task = Process()
-        task.launchPath = "/usr/sbin/screencapture"
-        task.arguments = ["-i", tempPath.path] // -i for interactive
-        task.launch()
-        task.waitUntilExit()
-        
-        guard FileManager.default.fileExists(atPath: tempPath.path) else {
-            return nil // User cancelled or failed
-        }
-        
-        guard let image = NSImage(contentsOf: tempPath) else {
+        // Create an image from the screen
+        guard let cgImage = CGWindowListCreateImage(
+            captureRect,
+            .optionOnScreenOnly,
+            kCGNullWindowID,
+            .bestResolution
+        ) else {
             return nil
         }
         
-        // Cleanup
-        try? FileManager.default.removeItem(at: tempPath)
-        
+        let image = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
         return image
     }
     
